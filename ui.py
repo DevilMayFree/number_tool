@@ -14,6 +14,7 @@ from worker import Worker, columns, get_empty_df
 
 class Ui:
     def __init__(self, root):
+        self.task_label = None
         self.number_query_entry = None
         self.add_window = None
         self.style = None
@@ -79,6 +80,11 @@ class Ui:
             messagebox.showerror("错误", data)
         elif event_type == EventType.UPDATE_UI_TREE_VIEW:
             self.root.after(0, self._update_ui_tree_view, data)
+        elif event_type == EventType.UPDATE_UI_TASK_TIPS:
+            self._update_ui_task_tips(data)
+
+    def _update_ui_task_tips(self, data):
+        self.task_label.config(text=data)
 
     def _update_ui_tree_view(self, data):
         print('_update_ui')
@@ -169,8 +175,8 @@ class Ui:
         back_label = ttk.Label(bottom_right_frame, text="后台任务")
         back_label.pack(side=tk.LEFT)
 
-        task_label = ttk.Label(bottom_right_frame, text="正在读取csv文件...")
-        task_label.pack(side=tk.RIGHT)
+        self.task_label = ttk.Label(bottom_right_frame, text="")
+        self.task_label.pack(side=tk.RIGHT)
 
     def add_action(self):
         print('add_action')

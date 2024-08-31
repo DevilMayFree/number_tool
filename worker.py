@@ -18,7 +18,7 @@ class Worker:
         self._stop_event = threading.Event()
         self.filename = 'numbers.csv'
         self.df = None
-        print("worker thread start ...")
+        self.update_callback(EventType.UPDATE_UI_TASK_TIPS, "后台线程启动")
 
     def run(self):
         try:
@@ -58,6 +58,7 @@ class Worker:
             self.update_callback(EventType.ERROR, f"无法读取 CSV 文件. 错误信息：{str(e)}")
 
     def append_df(self, entry_list):
+        self.update_callback(EventType.UPDATE_UI_TASK_TIPS, "号码录入")
         try:
             if self.df is not None:
                 new_entry = pd.DataFrame(entry_list, columns=columns)
@@ -70,7 +71,7 @@ class Worker:
             return False
 
     def update_remark(self, number, remark):
-        print(f'update remark worker number:{number} remark:{remark}')
+        self.update_callback(EventType.UPDATE_UI_TASK_TIPS, f"更新备注操作 号码:{number};备注:{remark}")
         if self.df['remark'].dtype == 'float64':
             self.df['remark'] = self.df['remark'].astype(object).fillna('')
 
@@ -79,6 +80,5 @@ class Worker:
         self.reload_data()
 
     def stop(self):
-        """停止工作线程"""
-        print("停止工作线程")
+        self.update_callback(EventType.UPDATE_UI_TASK_TIPS, "停止工作线程")
         self._stop_event.set()

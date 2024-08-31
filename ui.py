@@ -6,7 +6,8 @@ from tkinter import ttk, messagebox
 from ttkbootstrap import Style
 
 from constant import default_tip, add_input_empty, number_exist, expiry_days_number, tip_label, assign_tip_label, \
-    assign_input_empty
+    assign_input_empty, renew_tip_label, renew_input_empty, renew_expiry_days_number, \
+    renew_expiry_days_must_greater_than_zero
 from tools import center_window, center_dialog
 from tree_menu import create_context_menu
 from type import EventType
@@ -91,9 +92,9 @@ class Ui:
         self.task_label.config(text=data)
 
     def _update_ui_tree_view(self, data):
-        self.update_ui(EventType.UPDATE_UI_TASK_TIPS,"更新视图")
+        self.update_ui(EventType.UPDATE_UI_TASK_TIPS, "更新视图")
         if self.tree is None:
-            self.update_ui(EventType.UPDATE_UI_TASK_TIPS,"视图未初始化")
+            self.update_ui(EventType.UPDATE_UI_TASK_TIPS, "视图未初始化")
         if data is not None:
             self.df = data
             self.tree.delete(*self.tree.get_children())
@@ -242,7 +243,57 @@ class Ui:
         print('export_action')
 
     def renew_action(self):
-        print('renew_action')
+        self.update_ui(EventType.UPDATE_UI_TASK_TIPS, "批量续费")
+        selected_item = self.tree.selection()
+        if not selected_item:
+            messagebox.showwarning("选择错误", "请至少选择一个号码")
+            return
+        # selected_number = self.tree.item(selected_item[0])['values'][0]
+        selected_number_list = [self.tree.item(item)['values'][0] for item in selected_item]
+
+        # 创建模态窗口
+        self.renew_window = tk.Toplevel(self.root)
+        self.renew_window.title("批量续费")
+
+        # 设置模态窗口为模态
+        self.renew_window.grab_set()
+        self.renew_window.resizable(False, False)
+
+        center_dialog(self.renew_window, self.root, 330, 200)
+
+        # 确保模态窗口关闭时会释放焦点
+        self.renew_window.protocol("WM_DELETE_WINDOW", self.renew_window.destroy)
+
+        # 提示
+        self.renew_tip_label = ttk.Label(self.renew_window, text="", style=renew_tip_label, foreground="blue")
+        self.renew_tip_label.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky="n")
+
+        # 表单
+        ttk.Label(self.renew_window, text="续费天数:").grid(row=1, column=0, padx=10, pady=10, sticky="e")
+        self.renew_num_entry = ttk.Entry(self.renew_window, width=30)
+        self.renew_num_entry.grid(row=1, column=1, padx=10, pady=10)
+
+        def renew_action():
+            add_number = self.renew_num_entry.get().strip()
+            # 输入为空
+            if not add_number:
+                self.renew_label_action(text=renew_input_empty)
+                return
+
+            if add_number.isdigit():
+                add_number = int(add_number)
+            else:
+                self.renew_label_action(text=renew_expiry_days_number)
+                return
+
+            if add_number <= 0:
+                self.renew_label_action(text=renew_expiry_days_must_greater_than_zero)
+                return
+
+            self.update_expiry_date(selected_number_list, add_number)
+
+        renew_submit_button = ttk.Button(self.renew_window, text="批量续费", command=renew_action)
+        renew_submit_button.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky="n")
 
     def assign_action(self):
         self.update_ui(EventType.UPDATE_UI_TASK_TIPS, "分配团队")
@@ -297,6 +348,10 @@ class Ui:
         self.assign_tip_label.config(text=text)
         self.style.configure(assign_tip_label, foreground="red")
 
+    def renew_label_action(self,text):
+        self.renew_tip_label.config(text=text)
+        self.style.configure(renew_tip_label, foreground="red")
+
     def add_number_action(self):
         try:
             number = self.add_number_entry.get().strip()
@@ -332,7 +387,7 @@ class Ui:
                 messagebox.showinfo("成功", "号码录入成功！")
         except Exception as e:
             self.add_window.destroy()
-            messagebox.showerror("错误", f"发生了未知错误：{str(e)}")
+            messagebox.showerror("错误", f"新增发生错误：{str(e)}")
 
     def clear_entries(self):
         self.add_number_entry.delete(0, tk.END)
@@ -344,6 +399,9 @@ class Ui:
     def clear_assign(self):
         self.assign_team_entry.delete(0, tk.END)
 
+    def clear_renew(self):
+        self.renew_num_entry.delete(0, tk.END)
+
     def update_remark(self, number, remark):
         self.worker.update_data('remark', number, remark)
 
@@ -354,3 +412,12 @@ class Ui:
             self.clear_assign()
             self.assign_window.destroy()
             messagebox.showinfo("成功", "分配团队成功！")
+
+    def update_expiry_date(self, numer_list, add_number):
+        self.update_ui(EventType.UPDATE_UI_TASK_TIPS, f"批量续费:{add_number}天")
+        print(f'numer_list:{numer_list}')
+        b = self.worker.update_expiry_date(numer_list, add_number)
+        if b:
+            self.clear_renew()
+            self.renew_window.destroy()
+            messagebox.showinfo("成功", "批量续费成功！")

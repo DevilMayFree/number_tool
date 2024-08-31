@@ -1,5 +1,6 @@
 import os
 import threading
+from datetime import timedelta, datetime
 
 import pandas as pd
 
@@ -83,6 +84,36 @@ class Worker:
             return True
         except Exception as e:
             self.update_callback(EventType.ERROR, f"更新出错. 错误信息：{str(e)}")
+            return False
+
+    def update_expiry_date(self, number_list, add_number):
+        try:
+            for number in number_list:
+                match = self.df['number'].astype(str).str.strip() == str(number)
+                current_expiry_date = pd.to_datetime(self.df.loc[match, 'expiry_date'].values[0]).date()
+                new_expiry_date = current_expiry_date + timedelta(days=add_number)
+                self.df.loc[match, 'expiry_date'] = new_expiry_date
+            self.update_remaining_days()
+            self.reload_data()
+            return True
+        except Exception as e:
+            print(e)
+            self.update_callback(EventType.ERROR, f"更新出错. 错误信息：{str(e)}")
+            return False
+
+    def update_remaining_days(self):
+        self.update_callback(EventType.UPDATE_UI_TASK_TIPS, "更新剩余天数")
+        try:
+            for index, row in self.df.iterrows():
+                expiry_date = pd.to_datetime(row['expiry_date']).date()
+                remaining_days = (expiry_date - datetime.now().date()).days
+                self.df.at[index, 'remaining_days'] = remaining_days
+
+            self.df.to_csv(self.filename, index=False)
+            self.reload_data()
+            return True
+        except Exception as e:
+            self.update_callback(EventType.ERROR, f"更新剩余天数出错. 错误信息：{str(e)}")
             return False
 
     def stop(self):

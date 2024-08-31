@@ -4,8 +4,8 @@ from datetime import timedelta, datetime
 
 import pandas as pd
 
-from constant import columns
-from type import EventType
+from constant import columns, near_expiry_numbers_filename
+from type import EventType, NearExpiryType
 
 
 def get_empty_df():
@@ -32,6 +32,11 @@ class Worker:
             self.update_callback(EventType.ERROR, f"程序初始化时出现错误。错误信息：{str(e)}")
 
         self.refresh_tree_view()
+        self.start_update_timer()
+
+    def start_update_timer(self):
+        self.update_remaining_days()
+        self.root.after(10800000, self.start_update_timer)
 
     def reload_data(self):
         self.read_csv_file()
@@ -115,6 +120,18 @@ class Worker:
         except Exception as e:
             self.update_callback(EventType.ERROR, f"更新剩余天数出错. 错误信息：{str(e)}")
             return False
+
+    def export_near_expiry_data(self):
+        try:
+            near_expiry_df = self.df[(pd.to_datetime(self.df['expiry_date']) - datetime.now()).dt.days <= 10]
+            if not near_expiry_df.empty:
+                near_expiry_df.to_csv(near_expiry_numbers_filename, index=False)
+                return NearExpiryType.SUCCESS
+            else:
+                return NearExpiryType.NO_NEED
+        except Exception as e:
+            self.update_callback(EventType.ERROR, f"导出时出错. 错误信息：{str(e)}")
+            return NearExpiryType.ERROR
 
     def stop(self):
         self.update_callback(EventType.UPDATE_UI_TASK_TIPS, "停止工作线程")

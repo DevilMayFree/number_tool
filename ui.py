@@ -7,10 +7,10 @@ from ttkbootstrap import Style
 
 from constant import default_tip, add_input_empty, number_exist, expiry_days_number, tip_label, assign_tip_label, \
     assign_input_empty, renew_tip_label, renew_input_empty, renew_expiry_days_number, \
-    renew_expiry_days_must_greater_than_zero
+    renew_expiry_days_must_greater_than_zero, near_expiry_numbers_filename
 from tools import center_window, center_dialog
 from tree_menu import create_context_menu
-from type import EventType
+from type import EventType, NearExpiryType
 from worker import Worker, columns, get_empty_df
 
 
@@ -240,7 +240,12 @@ class Ui:
             self._update_ui_tree_view(result)
 
     def export_action(self):
-        print('export_action')
+        self.update_ui(EventType.UPDATE_UI_TASK_TIPS, "导出即将过期")
+        e = self.worker.export_near_expiry_data()
+        if NearExpiryType.SUCCESS == e:
+            messagebox.showinfo("成功", f"已导出剩余 10 天内到期的号码至 {near_expiry_numbers_filename}")
+        elif NearExpiryType.NO_NEED == e:
+            messagebox.showinfo("提示", "没有即将过期的号码。")
 
     def renew_action(self):
         self.update_ui(EventType.UPDATE_UI_TASK_TIPS, "批量续费")
@@ -415,7 +420,6 @@ class Ui:
 
     def update_expiry_date(self, numer_list, add_number):
         self.update_ui(EventType.UPDATE_UI_TASK_TIPS, f"批量续费:{add_number}天")
-        print(f'numer_list:{numer_list}')
         b = self.worker.update_expiry_date(numer_list, add_number)
         if b:
             self.clear_renew()

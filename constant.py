@@ -21,3 +21,5 @@ assign_tip_label = "AssignTipLabel"
 renew_tip_label = "RenewTipLabel"
 
 columns = ['number', 'label', 'code', 'expiry_date', 'remaining_days', 'entry_date', 'remark']
+
+near_expiry_numbers_filename = 'near_expiry_numbers.csv'

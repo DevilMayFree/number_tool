@@ -61,13 +61,22 @@ class Worker:
         try:
             if self.df is not None:
                 new_entry = pd.DataFrame(entry_list, columns=columns)
-                #　self.df.append(new_entry, ignore_index=True)
+                # 　self.df.append(new_entry, ignore_index=True)
                 new_entry.to_csv(self.filename, mode='a', header=False, index=False)
                 self.reload_data()
                 return True
         except Exception as e:
             self.update_callback(EventType.ERROR, f"新增出错. 错误信息：{str(e)}")
             return False
+
+    def update_remark(self, number, remark):
+        print(f'update remark worker number:{number} remark:{remark}')
+        if self.df['remark'].dtype == 'float64':
+            self.df['remark'] = self.df['remark'].astype(object).fillna('')
+
+        self.df.loc[self.df['number'].astype(str).str.strip() == str(number), 'remark'] = remark
+        self.df.to_csv(self.filename, index=False)
+        self.reload_data()
 
     def stop(self):
         """停止工作线程"""

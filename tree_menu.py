@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 
-def create_context_menu(root, tree):
+
+def create_context_menu(root, tree, method):
     def on_right_click(event):
         item = tree.identify_row(event.y)
         if item:
@@ -28,11 +29,12 @@ def create_context_menu(root, tree):
 
     def add_remark():
         selected_item = tree.selection()[0]
+        values = tree.item(selected_item, "values")
         remark = simpledialog.askstring("添加备注", "添加备注:")
         if remark:
             tree.item(selected_item, tags=(remark,))
             # 这里写入文件
-
+            method(values[0], remark)
             messagebox.showinfo("添加备注", f"备注已添加: {remark}")
 
     menu = tk.Menu(root, tearoff=0)

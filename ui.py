@@ -158,7 +158,7 @@ class Ui:
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
 
         # 设置右键菜单
-        menu, on_right_click = create_context_menu(self.root, self.tree)
+        menu, on_right_click = create_context_menu(self.root, self.tree,self.update_remark)
         self.tree.bind("<Button-3>", on_right_click)
 
     def create_bottom_view(self, bottom_frame):
@@ -229,7 +229,6 @@ class Ui:
         else:
             self._update_ui_tree_view(result)
 
-
     def export_action(self):
         print('export_action')
 
@@ -286,3 +285,7 @@ class Ui:
         self.add_code_entry.delete(0, tk.END)
         self.add_expiration_entry.delete(0, tk.END)
         self.add_remark_entry.delete(0, tk.END)
+
+    def update_remark(self,number,remark):
+        self.worker.update_remark(number,remark)
+

@@ -70,14 +70,20 @@ class Worker:
             self.update_callback(EventType.ERROR, f"新增出错. 错误信息：{str(e)}")
             return False
 
-    def update_remark(self, number, remark):
-        self.update_callback(EventType.UPDATE_UI_TASK_TIPS, f"更新备注操作 号码:{number};备注:{remark}")
-        if self.df['remark'].dtype == 'float64':
-            self.df['remark'] = self.df['remark'].astype(object).fillna('')
+    def update_data(self, name, number, data):
+        try:
+            self.update_callback(EventType.UPDATE_UI_TASK_TIPS, f"更新操作 字段:{name} 号码:{number};数据:{data}")
+            if self.df[name].dtype == 'float64':
+                self.df[name] = self.df[name].astype(object).fillna('')
 
-        self.df.loc[self.df['number'].astype(str).str.strip() == str(number), 'remark'] = remark
-        self.df.to_csv(self.filename, index=False)
-        self.reload_data()
+            self.df[name] = self.df[name].astype(str)
+            self.df.loc[self.df['number'].astype(str).str.strip() == str(number), name] = str(data)
+            self.df.to_csv(self.filename, index=False)
+            self.reload_data()
+            return True
+        except Exception as e:
+            self.update_callback(EventType.ERROR, f"更新出错. 错误信息：{str(e)}")
+            return False
 
     def stop(self):
         self.update_callback(EventType.UPDATE_UI_TASK_TIPS, "停止工作线程")

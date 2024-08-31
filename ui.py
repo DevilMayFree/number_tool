@@ -5,7 +5,8 @@ from tkinter import ttk, messagebox
 
 from ttkbootstrap import Style
 
-from constant import default_tip, add_input_empty, number_exist, expiry_days_number, tip_label
+from constant import default_tip, add_input_empty, number_exist, expiry_days_number, tip_label, assign_tip_label, \
+    assign_input_empty
 from tools import center_window, center_dialog
 from tree_menu import create_context_menu
 from type import EventType
@@ -14,6 +15,9 @@ from worker import Worker, columns, get_empty_df
 
 class Ui:
     def __init__(self, root):
+        self.assign_window = None
+        self.assign_team_entry = None
+        self.assign_tip_label = None
         self.task_label = None
         self.number_query_entry = None
         self.add_window = None
@@ -87,9 +91,9 @@ class Ui:
         self.task_label.config(text=data)
 
     def _update_ui_tree_view(self, data):
-        print('_update_ui')
+        self.update_ui(EventType.UPDATE_UI_TASK_TIPS,"更新视图")
         if self.tree is None:
-            print('_update_ui error')
+            self.update_ui(EventType.UPDATE_UI_TASK_TIPS,"视图未初始化")
         if data is not None:
             self.df = data
             self.tree.delete(*self.tree.get_children())
@@ -164,7 +168,7 @@ class Ui:
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
 
         # 设置右键菜单
-        menu, on_right_click = create_context_menu(self.root, self.tree,self.update_remark)
+        menu, on_right_click = create_context_menu(self.root, self.tree, self.update_remark)
         self.tree.bind("<Button-3>", on_right_click)
 
     def create_bottom_view(self, bottom_frame):
@@ -179,7 +183,6 @@ class Ui:
         self.task_label.pack(side=tk.RIGHT)
 
     def add_action(self):
-        print('add_action')
         # 创建模态窗口
         self.add_window = tk.Toplevel(self.root)
         self.add_window.title("录入号码")
@@ -221,7 +224,7 @@ class Ui:
         add_submit_button.grid(row=6, column=0, columnspan=2, padx=10, pady=10, sticky="n")
 
     def query_action(self):
-        print('query_action')
+        self.update_ui(EventType.UPDATE_UI_TASK_TIPS, "查询号码")
         number = self.number_query_entry.get().strip()
 
         if not number:
@@ -242,11 +245,57 @@ class Ui:
         print('renew_action')
 
     def assign_action(self):
-        print('assign_action')
+        self.update_ui(EventType.UPDATE_UI_TASK_TIPS, "分配团队")
+        selected_item = self.tree.selection()
+        if not selected_item:
+            messagebox.showwarning("选择错误", "请先选择一个号码")
+            return
+        selected_number = self.tree.item(selected_item[0])['values'][0]
+
+        # 创建模态窗口
+        self.assign_window = tk.Toplevel(self.root)
+        self.assign_window.title("分配团队")
+
+        # 设置模态窗口为模态
+        self.assign_window.grab_set()
+        self.assign_window.resizable(False, False)
+
+        center_dialog(self.assign_window, self.root, 330, 200)
+
+        # 确保模态窗口关闭时会释放焦点
+        self.assign_window.protocol("WM_DELETE_WINDOW", self.assign_window.destroy)
+
+        # 小标题
+        title_tip_label = ttk.Label(self.assign_window, text="为号码 {} 分配团队".format(selected_number))
+        title_tip_label.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky="n")
+
+        # 提示
+        self.assign_tip_label = ttk.Label(self.assign_window, text="", style=assign_tip_label, foreground="blue")
+        self.assign_tip_label.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky="n")
+
+        # 表单
+        ttk.Label(self.assign_window, text="团队:").grid(row=2, column=0, padx=10, pady=10, sticky="e")
+        self.assign_team_entry = ttk.Entry(self.assign_window, width=30)
+        self.assign_team_entry.grid(row=2, column=1, padx=10, pady=10)
+
+        def assign_team_action():
+            new_label = self.assign_team_entry.get().strip()
+            # 输入为空
+            if not new_label:
+                self.assign_label_action(text=assign_input_empty)
+                return
+            self.update_label(selected_number, new_label)
+
+        assign_submit_button = ttk.Button(self.assign_window, text="分配团队", command=assign_team_action)
+        assign_submit_button.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky="n")
 
     def tip_label_action(self, text):
         self.tip_label.config(text=text)
         self.style.configure(tip_label, foreground="red")
+
+    def assign_label_action(self, text):
+        self.assign_tip_label.config(text=text)
+        self.style.configure(assign_tip_label, foreground="red")
 
     def add_number_action(self):
         try:
@@ -292,6 +341,16 @@ class Ui:
         self.add_expiration_entry.delete(0, tk.END)
         self.add_remark_entry.delete(0, tk.END)
 
-    def update_remark(self,number,remark):
-        self.worker.update_remark(number,remark)
+    def clear_assign(self):
+        self.assign_team_entry.delete(0, tk.END)
 
+    def update_remark(self, number, remark):
+        self.worker.update_data('remark', number, remark)
+
+    def update_label(self, number, data):
+        self.update_ui(EventType.UPDATE_UI_TASK_TIPS, f"为号码:{number}分配团队:{data}")
+        b = self.worker.update_data('label', number, data)
+        if b:
+            self.clear_assign()
+            self.assign_window.destroy()
+            messagebox.showinfo("成功", "分配团队成功！")

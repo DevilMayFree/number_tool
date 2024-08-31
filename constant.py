@@ -6,6 +6,10 @@ number_exist = "该号码已存在"
 
 expiry_days_number = "有效期必须是有效的数字!"
 
+assign_input_empty = "请输入团队名称!"
+
 tip_label = "TipLabel"
+
+assign_tip_label = "AssignTipLabel"
 
 columns = ['number', 'label', 'code', 'expiry_date', 'remaining_days', 'entry_date', 'remark']

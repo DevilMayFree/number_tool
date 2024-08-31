@@ -9,11 +9,12 @@ from constant import default_tip, add_input_empty, number_exist, expiry_days_num
 from tools import center_window, center_dialog
 from tree_menu import create_context_menu
 from type import EventType
-from worker import Worker, columns
+from worker import Worker, columns, get_empty_df
 
 
 class Ui:
     def __init__(self, root):
+        self.number_query_entry = None
         self.add_window = None
         self.style = None
         self.tip_label = None
@@ -112,8 +113,8 @@ class Ui:
         query_label = ttk.Label(top_center_frame, text="查询号码")
         query_label.pack(side=tk.LEFT, padx=5)
 
-        entry = ttk.Entry(top_center_frame, width=30)
-        entry.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=False)
+        self.number_query_entry = ttk.Entry(top_center_frame, width=30)
+        self.number_query_entry.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=False)
 
         query_button = ttk.Button(top_center_frame, text="查询号码", command=self.query_action)
         query_button.pack(side=tk.LEFT, padx=5)
@@ -187,7 +188,7 @@ class Ui:
         self.add_window.protocol("WM_DELETE_WINDOW", self.add_window.destroy)
 
         # 表单提示
-        self.tip_label = ttk.Label(self.add_window, text=default_tip, style=tip_label)
+        self.tip_label = ttk.Label(self.add_window, text=default_tip, style=tip_label, foreground="blue")
         self.tip_label.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky="n")
         # 表单
         ttk.Label(self.add_window, text="号码:").grid(row=1, column=0, padx=10, pady=10, sticky="e")
@@ -215,6 +216,19 @@ class Ui:
 
     def query_action(self):
         print('query_action')
+        number = self.number_query_entry.get().strip()
+
+        if not number:
+            self.worker.reload_data()
+            return
+
+        result = self.df[self.df['number'].astype(str).str.contains(number, case=False, na=False)]
+
+        if result.empty:
+            self._update_ui_tree_view(get_empty_df())
+        else:
+            self._update_ui_tree_view(result)
+
 
     def export_action(self):
         print('export_action')
@@ -259,12 +273,12 @@ class Ui:
             b = self.worker.append_df(
                 [[number, label if label else '', code, expiry_date, expiry_days, entry_date, remark]])
             if b:
-                messagebox.showinfo("成功", "号码录入成功！")
                 self.clear_entries()
+                self.add_window.destroy()
+                messagebox.showinfo("成功", "号码录入成功！")
         except Exception as e:
+            self.add_window.destroy()
             messagebox.showerror("错误", f"发生了未知错误：{str(e)}")
-
-        self.add_window.destroy()
 
     def clear_entries(self):
         self.add_number_entry.delete(0, tk.END)

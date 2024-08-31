@@ -7,6 +7,10 @@ from constant import columns
 from type import EventType
 
 
+def get_empty_df():
+    return pd.DataFrame(columns=columns)
+
+
 class Worker:
     def __init__(self, root, update_callback):
         self.root = root
@@ -26,6 +30,10 @@ class Worker:
         except Exception as e:
             self.update_callback(EventType.ERROR, f"程序初始化时出现错误。错误信息：{str(e)}")
 
+        self.refresh_tree_view()
+
+    def reload_data(self):
+        self.read_csv_file()
         self.refresh_tree_view()
 
     def refresh_tree_view(self):
@@ -55,8 +63,7 @@ class Worker:
                 new_entry = pd.DataFrame(entry_list, columns=columns)
                 #　self.df.append(new_entry, ignore_index=True)
                 new_entry.to_csv(self.filename, mode='a', header=False, index=False)
-                self.read_csv_file()
-                self.refresh_tree_view()
+                self.reload_data()
                 return True
         except Exception as e:
             self.update_callback(EventType.ERROR, f"新增出错. 错误信息：{str(e)}")

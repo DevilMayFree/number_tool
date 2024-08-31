@@ -32,6 +32,7 @@ def create_context_menu(root, tree):
         if remark:
             tree.item(selected_item, tags=(remark,))
             # 这里写入文件
+
             messagebox.showinfo("添加备注", f"备注已添加: {remark}")
 
     menu = tk.Menu(root, tearoff=0)

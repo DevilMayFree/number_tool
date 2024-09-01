@@ -8,7 +8,7 @@ expiry_days_number = "有效期必须是有效的数字!"
 
 renew_expiry_days_number = "续费天数必须是有效的数字!"
 
-renew_expiry_days_must_greater_than_zero = "续费天数必须大于0"
+renew_expiry_days_must_greater_than_zero = "续费天数必须大于等于0"
 
 assign_input_empty = "请输入团队名称!"
 

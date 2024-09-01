@@ -298,7 +298,7 @@ class Ui:
                 self.renew_label_action(text=renew_expiry_days_number)
                 return
 
-            if add_number <= 0:
+            if add_number < 0:
                 self.renew_label_action(text=renew_expiry_days_must_greater_than_zero)
                 return
 
@@ -314,7 +314,7 @@ class Ui:
                 self.renew_label_action(text=renew_expiry_days_number)
                 return
 
-            if add_card_number <= 0:
+            if add_card_number < 0:
                 self.renew_label_action(text=renew_expiry_days_must_greater_than_zero)
                 return
 

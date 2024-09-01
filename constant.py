@@ -12,7 +12,9 @@ renew_expiry_days_must_greater_than_zero = "续费天数必须大于0"
 
 assign_input_empty = "请输入团队名称!"
 
-renew_input_empty = "请输入续费天数!"
+renew_input_empty = "请输入客户续费天数!"
+
+renew_card_input_empty = "请输入卡片续费天数!"
 
 tip_label = "TipLabel"
 

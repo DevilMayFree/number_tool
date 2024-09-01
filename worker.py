@@ -111,6 +111,21 @@ class Worker:
             self.update_callback(EventType.ERROR, f"更新出错. 错误信息：{str(e)}")
             return False
 
+    def update_card_expiry_date(self, number_list, add_number):
+        try:
+            for number in number_list:
+                match = self.df['number'].astype(str).str.strip() == str(number)
+                current_expiry_date = pd.to_datetime(self.df.loc[match, 'card_expiry_date'].values[0]).date()
+                new_expiry_date = current_expiry_date + timedelta(days=add_number)
+                self.df.loc[match, 'card_expiry_date'] = new_expiry_date
+            self.update_card_remaining_days()
+            self.reload_data()
+            return True
+        except Exception as e:
+            print(e)
+            self.update_callback(EventType.ERROR, f"更新出错. 错误信息：{str(e)}")
+            return False
+
     def update_remaining_days(self):
         self.update_callback(EventType.UPDATE_UI_TASK_TIPS, "更新客户剩余天数")
         try:

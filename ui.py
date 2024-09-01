@@ -7,7 +7,8 @@ from ttkbootstrap import Style
 
 from constant import default_tip, add_input_empty, number_exist, expiry_days_number, tip_label, assign_tip_label, \
     assign_input_empty, renew_tip_label, renew_input_empty, renew_expiry_days_number, \
-    renew_expiry_days_must_greater_than_zero, near_expiry_numbers_filename, near_card_expiry_numbers_filename
+    renew_expiry_days_must_greater_than_zero, near_expiry_numbers_filename, near_card_expiry_numbers_filename, \
+    renew_card_input_empty
 from tools import center_window, center_dialog
 from tree_menu import create_context_menu
 from type import EventType, NearExpiryType
@@ -266,7 +267,7 @@ class Ui:
         self.renew_window.grab_set()
         self.renew_window.resizable(False, False)
 
-        center_dialog(self.renew_window, self.root, 330, 200)
+        center_dialog(self.renew_window, self.root, 400, 200)
 
         # 确保模态窗口关闭时会释放焦点
         self.renew_window.protocol("WM_DELETE_WINDOW", self.renew_window.destroy)
@@ -276,9 +277,13 @@ class Ui:
         self.renew_tip_label.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky="n")
 
         # 表单
-        ttk.Label(self.renew_window, text="续费天数:").grid(row=1, column=0, padx=10, pady=10, sticky="e")
+        ttk.Label(self.renew_window, text="客户续费天数:").grid(row=1, column=0, padx=10, pady=10, sticky="e")
         self.renew_num_entry = ttk.Entry(self.renew_window, width=30)
         self.renew_num_entry.grid(row=1, column=1, padx=10, pady=10)
+
+        ttk.Label(self.renew_window, text="卡片续费天数:").grid(row=2, column=0, padx=10, pady=10, sticky="e")
+        self.renew_card_num_entry = ttk.Entry(self.renew_window, width=30)
+        self.renew_card_num_entry.grid(row=2, column=1, padx=10, pady=10)
 
         def renew_action():
             add_number = self.renew_num_entry.get().strip()
@@ -297,7 +302,23 @@ class Ui:
                 self.renew_label_action(text=renew_expiry_days_must_greater_than_zero)
                 return
 
-            self.update_expiry_date(selected_number_list, add_number)
+            add_card_number = self.renew_card_num_entry.get().strip()
+            # 输入为空
+            if not add_card_number:
+                self.renew_label_action(text=renew_card_input_empty)
+                return
+
+            if add_card_number.isdigit():
+                add_card_number = int(add_card_number)
+            else:
+                self.renew_label_action(text=renew_expiry_days_number)
+                return
+
+            if add_card_number <= 0:
+                self.renew_label_action(text=renew_expiry_days_must_greater_than_zero)
+                return
+
+            self.update_expiry_date(selected_number_list, add_number, add_card_number)
 
         renew_submit_button = ttk.Button(self.renew_window, text="批量续费", command=renew_action)
         renew_submit_button.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky="n")
@@ -429,10 +450,11 @@ class Ui:
             self.assign_window.destroy()
             messagebox.showinfo("成功", "分配团队成功！")
 
-    def update_expiry_date(self, numer_list, add_number):
+    def update_expiry_date(self, numer_list, add_number, add_card_number):
         self.update_ui(EventType.UPDATE_UI_TASK_TIPS, f"批量续费:{add_number}天")
         b = self.worker.update_expiry_date(numer_list, add_number)
+        b = self.worker.update_card_expiry_date(numer_list, add_card_number)
         if b:
             self.clear_renew()
             self.renew_window.destroy()
-            messagebox.showinfo("成功", "批量续费成功！")
+            messagebox.showinfo("成功", "客户批量续费成功！")

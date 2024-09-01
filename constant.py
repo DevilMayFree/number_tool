@@ -25,7 +25,12 @@ renew_tip_label = "RenewTipLabel"
 columns = ['number', 'label', 'code', 'expiry_date', 'remaining_days', 'card_expiry_date', 'card_remaining_days',
            'entry_date', 'remark']
 
+zh_columns = ['号码', '团队', '编码', '客户过期时间', '客户剩余天数', '卡片过期时间', '卡片剩余天数', '激活时间',
+              '备注']
+
+zh_to_raw = dict(zip(zh_columns, columns))
+raw_to_zh = dict(zip(columns, zh_columns))
+
 near_expiry_numbers_filename = 'near_expiry_numbers.csv'
 
 near_card_expiry_numbers_filename = 'near_card_expiry_numbers.csv'
-

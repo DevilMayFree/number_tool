@@ -4,7 +4,7 @@ from datetime import timedelta, datetime
 
 import pandas as pd
 
-from constant import columns, near_expiry_numbers_filename, near_card_expiry_numbers_filename
+from constant import columns, near_expiry_numbers_filename, near_card_expiry_numbers_filename, zh_to_raw, raw_to_zh
 from type import EventType, NearExpiryType
 
 
@@ -25,7 +25,8 @@ class Worker:
         try:
             if not os.path.exists(self.filename):
                 self.df = pd.DataFrame(columns=columns)
-                self.df.to_csv(self.filename, index=False)
+                # self.df.to_csv(self.filename, index=False)
+                self.save_to_csv(self.df,self.filename)
             else:
                 self.read_csv_file()
         except Exception as e:
@@ -52,7 +53,11 @@ class Worker:
 
     def read_csv_file(self):
         try:
-            self.df = pd.read_csv(self.filename)
+            self.df = pd.read_csv(self.filename, encoding='utf-8-sig')
+
+            # 将中文列名映射为英文列名
+            self.df.rename(columns=zh_to_raw, inplace=True)
+
             headers = self.df.columns.tolist()
             for col in headers:
                 if col in self.df.columns:
@@ -74,7 +79,8 @@ class Worker:
             if self.df is not None:
                 new_entry = pd.DataFrame(entry_list, columns=columns)
                 # 　self.df.append(new_entry, ignore_index=True)
-                new_entry.to_csv(self.filename, mode='a', header=False, index=False)
+                # new_entry.to_csv(self.filename, mode='a', header=False, index=False)
+                self.append_to_csv(new_entry,self.filename)
                 self.reload_data()
                 return True
         except Exception as e:
@@ -89,7 +95,8 @@ class Worker:
 
             self.df[name] = self.df[name].astype(str)
             self.df.loc[self.df['number'].astype(str).str.strip() == str(number), name] = str(data)
-            self.df.to_csv(self.filename, index=False)
+            # self.df.to_csv(self.filename, index=False)
+            self.save_to_csv(self.df, self.filename)
             self.reload_data()
             return True
         except Exception as e:
@@ -134,7 +141,8 @@ class Worker:
                 remaining_days = (expiry_date - datetime.now().date()).days
                 self.df.at[index, 'remaining_days'] = remaining_days
 
-            self.df.to_csv(self.filename, index=False)
+            # self.df.to_csv(self.filename, index=False)
+            self.save_to_csv(self.df, self.filename)
             self.reload_data()
             return True
         except Exception as e:
@@ -149,7 +157,8 @@ class Worker:
                 card_remaining_days = (card_expiry_date - datetime.now().date()).days
                 self.df.at[index, 'card_remaining_days'] = card_remaining_days
 
-            self.df.to_csv(self.filename, index=False)
+            # self.df.to_csv(self.filename, index=False)
+            self.save_to_csv(self.df, self.filename)
             self.reload_data()
             return True
         except Exception as e:
@@ -160,7 +169,8 @@ class Worker:
         try:
             near_expiry_df = self.df[(pd.to_datetime(self.df['expiry_date']) - datetime.now()).dt.days <= 10]
             if not near_expiry_df.empty:
-                near_expiry_df.to_csv(near_expiry_numbers_filename, index=False)
+                # near_expiry_df.to_csv(near_expiry_numbers_filename, index=False)
+                self.save_to_csv(near_expiry_df, near_expiry_numbers_filename)
                 return NearExpiryType.SUCCESS
             else:
                 return NearExpiryType.NO_NEED
@@ -172,13 +182,22 @@ class Worker:
         try:
             near_expiry_df = self.df[(pd.to_datetime(self.df['card_expiry_date']) - datetime.now()).dt.days <= 10]
             if not near_expiry_df.empty:
-                near_expiry_df.to_csv(near_card_expiry_numbers_filename, index=False)
+                # near_expiry_df.to_csv(near_card_expiry_numbers_filename, index=False)
+                self.save_to_csv(near_expiry_df, near_card_expiry_numbers_filename)
                 return NearExpiryType.SUCCESS
             else:
                 return NearExpiryType.NO_NEED
         except Exception as e:
             self.update_callback(EventType.ERROR, f"导出(卡片)时出错. 错误信息：{str(e)}")
             return NearExpiryType.ERROR
+
+    def save_to_csv(self, df, name):
+        df.rename(columns=raw_to_zh, inplace=True)
+        df.to_csv(name, index=False, encoding='utf-8-sig')
+
+    def append_to_csv(self, df, name):
+        df.rename(columns=raw_to_zh, inplace=True)
+        df.to_csv(name, mode='a', header=False, index=False, encoding='utf-8-sig')
 
     def stop(self):
         self.update_callback(EventType.UPDATE_UI_TASK_TIPS, "停止工作线程")

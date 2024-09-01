@@ -7,7 +7,7 @@ from ttkbootstrap import Style
 
 from constant import default_tip, add_input_empty, number_exist, expiry_days_number, tip_label, assign_tip_label, \
     assign_input_empty, renew_tip_label, renew_input_empty, renew_expiry_days_number, \
-    renew_expiry_days_must_greater_than_zero, near_expiry_numbers_filename
+    renew_expiry_days_must_greater_than_zero, near_expiry_numbers_filename, near_card_expiry_numbers_filename
 from tools import center_window, center_dialog
 from tree_menu import create_context_menu
 from type import EventType, NearExpiryType
@@ -16,21 +16,6 @@ from worker import Worker, columns, get_empty_df
 
 class Ui:
     def __init__(self, root):
-        self.assign_window = None
-        self.assign_team_entry = None
-        self.assign_tip_label = None
-        self.task_label = None
-        self.number_query_entry = None
-        self.add_window = None
-        self.style = None
-        self.tip_label = None
-        self.add_number_entry = None
-        self.add_team_entry = None
-        self.add_code_entry = None
-        self.add_expiration_entry = None
-        self.add_remark_entry = None
-        self.tree = None
-
         self.root = root
         self.setup_ui()
 
@@ -54,7 +39,7 @@ class Ui:
         self.style.theme_use('yeti')
 
         # 设置窗口大小
-        window_width = 1280
+        window_width = 1440
         window_height = 720
         center_window(self.root, window_width, window_height)
 
@@ -134,7 +119,10 @@ class Ui:
         top_right_frame = tk.Frame(top_frame)
         top_right_frame.pack(side=tk.RIGHT, padx=10, fill=tk.X, expand=True)
 
-        export_button = ttk.Button(top_right_frame, text="导出即将到期", command=self.export_action)
+        export_card_button = ttk.Button(top_right_frame, text="导出卡片即将到期", command=self.export_card_action)
+        export_card_button.pack(side=tk.RIGHT, padx=5)
+
+        export_button = ttk.Button(top_right_frame, text="导出客户即将到期", command=self.export_action)
         export_button.pack(side=tk.RIGHT, padx=5)
 
         batch_renew_button = ttk.Button(top_right_frame, text="批量续费", command=self.renew_action)
@@ -150,8 +138,10 @@ class Ui:
         self.tree.heading("number", text="号码")
         self.tree.heading("label", text="团队")
         self.tree.heading("code", text="编号")
-        self.tree.heading("expiry_date", text="到期日期")
-        self.tree.heading("remaining_days", text="剩余天数")
+        self.tree.heading("expiry_date", text="客户到期日期")
+        self.tree.heading("remaining_days", text="客户剩余天数")
+        self.tree.heading("card_expiry_date", text="卡片到期日期")
+        self.tree.heading("card_remaining_days", text="卡片剩余天数")
         self.tree.heading("entry_date", text="激活日期")
         self.tree.heading("remark", text="备注")
 
@@ -192,7 +182,7 @@ class Ui:
         self.add_window.grab_set()
         self.add_window.resizable(False, False)
 
-        center_dialog(self.add_window, self.root, 360, 350)
+        center_dialog(self.add_window, self.root, 360, 450)
 
         # 确保模态窗口关闭时会释放焦点
         self.add_window.protocol("WM_DELETE_WINDOW", self.add_window.destroy)
@@ -213,16 +203,20 @@ class Ui:
         self.add_code_entry = ttk.Entry(self.add_window, width=30)
         self.add_code_entry.grid(row=3, column=1, padx=10, pady=10)
 
-        ttk.Label(self.add_window, text="有效期:").grid(row=4, column=0, padx=10, pady=10, sticky="e")
+        ttk.Label(self.add_window, text="客户有效期:").grid(row=4, column=0, padx=10, pady=10, sticky="e")
         self.add_expiration_entry = ttk.Entry(self.add_window, width=30)
         self.add_expiration_entry.grid(row=4, column=1, padx=10, pady=10)
 
-        ttk.Label(self.add_window, text="备注(可选):").grid(row=5, column=0, padx=10, pady=10, sticky="e")
+        ttk.Label(self.add_window, text="卡片有效期:").grid(row=5, column=0, padx=10, pady=10, sticky="e")
+        self.add_card_expiration_entry = ttk.Entry(self.add_window, width=30)
+        self.add_card_expiration_entry.grid(row=5, column=1, padx=10, pady=10)
+
+        ttk.Label(self.add_window, text="备注(可选):").grid(row=6, column=0, padx=10, pady=10, sticky="e")
         self.add_remark_entry = ttk.Entry(self.add_window, width=30)
-        self.add_remark_entry.grid(row=5, column=1, padx=10, pady=10)
+        self.add_remark_entry.grid(row=6, column=1, padx=10, pady=10)
 
         add_submit_button = ttk.Button(self.add_window, text="录入号码", command=self.add_number_action)
-        add_submit_button.grid(row=6, column=0, columnspan=2, padx=10, pady=10, sticky="n")
+        add_submit_button.grid(row=7, column=0, columnspan=2, padx=10, pady=10, sticky="n")
 
     def query_action(self):
         self.update_ui(EventType.UPDATE_UI_TASK_TIPS, "查询号码")
@@ -240,12 +234,20 @@ class Ui:
             self._update_ui_tree_view(result)
 
     def export_action(self):
-        self.update_ui(EventType.UPDATE_UI_TASK_TIPS, "导出即将过期")
+        self.update_ui(EventType.UPDATE_UI_TASK_TIPS, "导出客户即将过期")
         e = self.worker.export_near_expiry_data()
         if NearExpiryType.SUCCESS == e:
-            messagebox.showinfo("成功", f"已导出剩余 10 天内到期的号码至 {near_expiry_numbers_filename}")
+            messagebox.showinfo("成功", f"已导出客户剩余 10 天内到期的号码至 {near_expiry_numbers_filename}")
         elif NearExpiryType.NO_NEED == e:
-            messagebox.showinfo("提示", "没有即将过期的号码。")
+            messagebox.showinfo("提示", "客户没有即将过期的号码。")
+
+    def export_card_action(self):
+        self.update_ui(EventType.UPDATE_UI_TASK_TIPS, "导出卡片即将过期")
+        e = self.worker.export_card_near_expiry_data()
+        if NearExpiryType.SUCCESS == e:
+            messagebox.showinfo("成功", f"已导出卡片剩余 10 天内到期的号码至 {near_card_expiry_numbers_filename}")
+        elif NearExpiryType.NO_NEED == e:
+            messagebox.showinfo("提示", "卡片没有即将过期的号码。")
 
     def renew_action(self):
         self.update_ui(EventType.UPDATE_UI_TASK_TIPS, "批量续费")
@@ -353,7 +355,7 @@ class Ui:
         self.assign_tip_label.config(text=text)
         self.style.configure(assign_tip_label, foreground="red")
 
-    def renew_label_action(self,text):
+    def renew_label_action(self, text):
         self.renew_tip_label.config(text=text)
         self.style.configure(renew_tip_label, foreground="red")
 
@@ -363,6 +365,7 @@ class Ui:
             label = self.add_team_entry.get().strip()
             code = self.add_code_entry.get().strip()
             expiry_days = self.add_expiration_entry.get().strip()
+            card_expiry_days = self.add_card_expiration_entry.get().strip()
             remark = self.add_remark_entry.get().strip()
 
             # 输入为空
@@ -381,11 +384,19 @@ class Ui:
                 self.tip_label_action(text=expiry_days_number)
                 return
 
+            if card_expiry_days.isdigit():
+                card_expiry_days = int(card_expiry_days)
+            else:
+                self.tip_label_action(text=expiry_days_number)
+                return
+
             entry_date = datetime.now().date()
             expiry_date = entry_date + timedelta(days=expiry_days)
+            card_expiry_date = entry_date + timedelta(days=card_expiry_days)
 
             b = self.worker.append_df(
-                [[number, label if label else '', code, expiry_date, expiry_days, entry_date, remark]])
+                [[number, label if label else '', code, expiry_date, expiry_days, card_expiry_date, card_expiry_days,
+                  entry_date, remark]])
             if b:
                 self.clear_entries()
                 self.add_window.destroy()

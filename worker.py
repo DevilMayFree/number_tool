@@ -4,7 +4,7 @@ from datetime import timedelta, datetime
 
 import pandas as pd
 
-from constant import columns, near_expiry_numbers_filename
+from constant import columns, near_expiry_numbers_filename, near_card_expiry_numbers_filename
 from type import EventType, NearExpiryType
 
 
@@ -33,10 +33,15 @@ class Worker:
 
         self.refresh_tree_view()
         self.start_update_timer()
+        self.start_card_update_timer()
 
     def start_update_timer(self):
         self.update_remaining_days()
         self.root.after(10800000, self.start_update_timer)
+
+    def start_card_update_timer(self):
+        self.update_card_remaining_days()
+        self.root.after(10600000, self.start_card_update_timer)
 
     def reload_data(self):
         self.read_csv_file()
@@ -107,7 +112,7 @@ class Worker:
             return False
 
     def update_remaining_days(self):
-        self.update_callback(EventType.UPDATE_UI_TASK_TIPS, "更新剩余天数")
+        self.update_callback(EventType.UPDATE_UI_TASK_TIPS, "更新客户剩余天数")
         try:
             for index, row in self.df.iterrows():
                 expiry_date = pd.to_datetime(row['expiry_date']).date()
@@ -121,6 +126,21 @@ class Worker:
             self.update_callback(EventType.ERROR, f"更新剩余天数出错. 错误信息：{str(e)}")
             return False
 
+    def update_card_remaining_days(self):
+        self.update_callback(EventType.UPDATE_UI_TASK_TIPS, "更新卡片剩余天数")
+        try:
+            for index, row in self.df.iterrows():
+                card_expiry_date = pd.to_datetime(row['card_expiry_date']).date()
+                card_remaining_days = (card_expiry_date - datetime.now().date()).days
+                self.df.at[index, 'card_remaining_days'] = card_remaining_days
+
+            self.df.to_csv(self.filename, index=False)
+            self.reload_data()
+            return True
+        except Exception as e:
+            self.update_callback(EventType.ERROR, f"更新卡片剩余天数出错. 错误信息：{str(e)}")
+            return False
+
     def export_near_expiry_data(self):
         try:
             near_expiry_df = self.df[(pd.to_datetime(self.df['expiry_date']) - datetime.now()).dt.days <= 10]
@@ -130,7 +150,19 @@ class Worker:
             else:
                 return NearExpiryType.NO_NEED
         except Exception as e:
-            self.update_callback(EventType.ERROR, f"导出时出错. 错误信息：{str(e)}")
+            self.update_callback(EventType.ERROR, f"导出(客户)时出错. 错误信息：{str(e)}")
+            return NearExpiryType.ERROR
+
+    def export_card_near_expiry_data(self):
+        try:
+            near_expiry_df = self.df[(pd.to_datetime(self.df['card_expiry_date']) - datetime.now()).dt.days <= 10]
+            if not near_expiry_df.empty:
+                near_expiry_df.to_csv(near_card_expiry_numbers_filename, index=False)
+                return NearExpiryType.SUCCESS
+            else:
+                return NearExpiryType.NO_NEED
+        except Exception as e:
+            self.update_callback(EventType.ERROR, f"导出(卡片)时出错. 错误信息：{str(e)}")
             return NearExpiryType.ERROR
 
     def stop(self):

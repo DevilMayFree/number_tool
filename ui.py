@@ -26,7 +26,7 @@ class Ui:
         self.thread.start()
 
     def setup_ui(self):
-        self.root.title("号码管理器v1.0")
+        self.root.title("号码管理器v1.1")
 
         # style = ttk.Style()
         # 设置 ttkbootstrap 样式

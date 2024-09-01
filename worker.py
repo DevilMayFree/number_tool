@@ -26,7 +26,7 @@ class Worker:
             if not os.path.exists(self.filename):
                 self.df = pd.DataFrame(columns=columns)
                 # self.df.to_csv(self.filename, index=False)
-                self.save_to_csv(self.df,self.filename)
+                self.save_to_csv(self.df, self.filename)
             else:
                 self.read_csv_file()
         except Exception as e:
@@ -80,7 +80,7 @@ class Worker:
                 new_entry = pd.DataFrame(entry_list, columns=columns)
                 # 　self.df.append(new_entry, ignore_index=True)
                 # new_entry.to_csv(self.filename, mode='a', header=False, index=False)
-                self.append_to_csv(new_entry,self.filename)
+                self.append_to_csv(new_entry, self.filename)
                 self.reload_data()
                 return True
         except Exception as e:
@@ -137,7 +137,10 @@ class Worker:
         self.update_callback(EventType.UPDATE_UI_TASK_TIPS, "更新客户剩余天数")
         try:
             for index, row in self.df.iterrows():
-                expiry_date = pd.to_datetime(row['expiry_date']).date()
+                pd_expiry_date = pd.to_datetime(row['expiry_date'], errors='coerce')
+                if pd.isna(pd_expiry_date):
+                    continue
+                expiry_date = pd_expiry_date.date()
                 remaining_days = (expiry_date - datetime.now().date()).days
                 self.df.at[index, 'remaining_days'] = remaining_days
 
@@ -153,7 +156,10 @@ class Worker:
         self.update_callback(EventType.UPDATE_UI_TASK_TIPS, "更新卡片剩余天数")
         try:
             for index, row in self.df.iterrows():
-                card_expiry_date = pd.to_datetime(row['card_expiry_date']).date()
+                pd_card_expiry_date = pd.to_datetime(row['card_expiry_date'], errors='coerce')
+                if pd.isna(pd_card_expiry_date):
+                    continue
+                card_expiry_date = pd_card_expiry_date.date()
                 card_remaining_days = (card_expiry_date - datetime.now().date()).days
                 self.df.at[index, 'card_remaining_days'] = card_remaining_days
 
@@ -162,6 +168,7 @@ class Worker:
             self.reload_data()
             return True
         except Exception as e:
+            print(f"error:{str(e)}")
             self.update_callback(EventType.ERROR, f"更新卡片剩余天数出错. 错误信息：{str(e)}")
             return False
 
